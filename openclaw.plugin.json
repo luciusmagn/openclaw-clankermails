@@ -1,0 +1,95 @@
+{
+  "id": "clankermails",
+  "name": "ClankerMails",
+  "description": "Give your bot a real email address. Read mail, manage inboxes, and process incoming messages through the ClankerMails API.",
+  "version": "1.0.0",
+  "activation": {
+    "onStartup": true,
+    "onCapabilities": ["tool"]
+  },
+  "uiHints": {
+    "apiKey": {
+      "label": "ClankerMails API Key",
+      "help": "Your ClankerMails API key. Get one at https://clankermails.com/dashboard/api-keys",
+      "placeholder": "cm_live_...",
+      "sensitive": true
+    },
+    "baseUrl": {
+      "label": "ClankerMails Base URL",
+      "help": "Override for self-hosted instances. Defaults to https://clankermails.com.",
+      "advanced": true
+    },
+    "pollIntervalSeconds": {
+      "label": "Poll interval (seconds)",
+      "help": "How often the background watcher checks for new mail. Default: 60.",
+      "advanced": true
+    },
+    "debounceSeconds": {
+      "label": "Alert debounce (seconds)",
+      "help": "Minimum time between alerts for the same inbox. Default: 300 (5 minutes).",
+      "advanced": true
+    },
+    "inboxesToWatch": {
+      "label": "Inboxes to watch",
+      "help": "List of inbox IDs or addresses to watch. Leave empty or set to \"all\" to watch every inbox on the account.",
+      "advanced": true
+    },
+    "webhookSecret": {
+      "label": "Webhook secret",
+      "help": "If you point a ClankerMails inbox webhook at this OpenClaw instance, paste the inbox's webhook_secret here for HMAC verification.",
+      "sensitive": true,
+      "advanced": true
+    },
+    "webhookPath": {
+      "label": "Webhook path",
+      "help": "Override the HTTP path that receives ClankerMails webhooks. Defaults to /clankermails/webhook.",
+      "advanced": true
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "apiKey": {
+        "type": "string"
+      },
+      "baseUrl": {
+        "type": "string"
+      },
+      "pollIntervalSeconds": {
+        "type": "number",
+        "minimum": 10
+      },
+      "debounceSeconds": {
+        "type": "number",
+        "minimum": 0
+      },
+      "inboxesToWatch": {
+        "oneOf": [
+          { "type": "string", "const": "all" },
+          { "type": "array", "items": { "type": "string" } }
+        ]
+      },
+      "webhookSecret": {
+        "type": "string"
+      },
+      "webhookPath": {
+        "type": "string"
+      }
+    }
+  },
+  "contracts": {
+    "tools": [
+      "clankermails_list_inboxes",
+      "clankermails_create_inbox",
+      "clankermails_get_inbox",
+      "clankermails_delete_inbox",
+      "clankermails_list_messages",
+      "clankermails_read_message",
+      "clankermails_mark_read",
+      "clankermails_mark_unread",
+      "clankermails_delete_message",
+      "clankermails_check_alerts"
+    ]
+  }
+}

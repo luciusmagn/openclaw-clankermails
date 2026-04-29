@@ -1,0 +1,36 @@
+{
+  "name": "@lambda-symbolics/openclaw-clankermails",
+  "version": "1.0.0",
+  "description": "ClankerMails plugin for OpenClaw -- give your bot a real email address",
+  "type": "module",
+  "openclaw": {
+    "extensions": ["./index.ts"],
+    "compat": {
+      "pluginApi": ">=2026.3.24-beta.2",
+      "minGatewayVersion": "2026.3.24-beta.2"
+    },
+    "build": {
+      "openclawVersion": "2026.3.24-beta.2",
+      "pluginSdkVersion": "2026.3.24-beta.2"
+    }
+  },
+  "dependencies": {
+    "typebox": "^1.1.33"
+  },
+  "devDependencies": {
+    "@openclaw/plugin-sdk": "workspace:*"
+  },
+  "keywords": [
+    "openclaw",
+    "openclaw-plugin",
+    "clankermails",
+    "email"
+  ],
+  "homepage": "https://clankermails.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/luciusmagn/clankermails"
+  },
+  "author": "Lambda Symbolics OÜ",
+  "license": "MIT"
+}
