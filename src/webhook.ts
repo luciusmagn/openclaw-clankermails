@@ -10,6 +10,7 @@
  * polling loop.
  */
 
+import type { IncomingMessage, ServerResponse } from "node:http";
 import type { PendingAlert } from "./poller.js";
 
 interface WebhookPayload {
@@ -23,54 +24,81 @@ interface WebhookPayload {
 	};
 }
 
-export interface WebhookContext {
-	request: Request;
+export interface WebhookHandlerOptions {
 	signatureSecret: string | null;
 	pushAlert: (alert: PendingAlert) => void;
 }
 
-export async function handleWebhook(ctx: WebhookContext): Promise<Response> {
-	if (ctx.request.method !== "POST") {
-		return new Response("Method not allowed", { status: 405 });
+function send(res: ServerResponse, status: number, body: string, contentType = "application/json"): void {
+	res.statusCode = status;
+	res.setHeader("content-type", contentType);
+	res.end(body);
+}
+
+async function readBody(req: IncomingMessage, maxBytes = 1024 * 1024): Promise<string> {
+	const chunks: Buffer[] = [];
+	let total = 0;
+	for await (const chunk of req) {
+		const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+		total += buf.length;
+		if (total > maxBytes) throw new Error("Request body too large");
+		chunks.push(buf);
 	}
+	return Buffer.concat(chunks).toString("utf8");
+}
 
-	const body = await ctx.request.text();
-
-	if (ctx.signatureSecret) {
-		const provided = ctx.request.headers.get("x-clankermails-signature");
-		if (!provided) return new Response("Missing signature", { status: 401 });
-
-		const expected = await hmacSha256Hex(ctx.signatureSecret, body);
-		if (!constantTimeEqual(provided, expected)) {
-			return new Response("Invalid signature", { status: 401 });
+export function createWebhookHandler(options: WebhookHandlerOptions) {
+	return async (req: IncomingMessage, res: ServerResponse): Promise<boolean> => {
+		if (req.method !== "POST") {
+			send(res, 405, JSON.stringify({ error: "Method not allowed" }));
+			return true;
 		}
-	}
 
-	let payload: WebhookPayload;
-	try {
-		payload = JSON.parse(body) as WebhookPayload;
-	} catch {
-		return new Response("Invalid JSON", { status: 400 });
-	}
+		let body: string;
+		try {
+			body = await readBody(req);
+		} catch {
+			send(res, 413, JSON.stringify({ error: "Body too large" }));
+			return true;
+		}
 
-	if (payload.event !== "message.received" || !payload.inbox?.id || !payload.message?.id) {
-		return new Response(JSON.stringify({ ok: true, ignored: true }), {
-			status: 200,
-			headers: { "content-type": "application/json" },
+		if (options.signatureSecret) {
+			const provided = req.headers["x-clankermails-signature"];
+			const providedString = Array.isArray(provided) ? provided[0] : provided;
+			if (!providedString) {
+				send(res, 401, JSON.stringify({ error: "Missing signature" }));
+				return true;
+			}
+			const expected = await hmacSha256Hex(options.signatureSecret, body);
+			if (!constantTimeEqual(providedString, expected)) {
+				send(res, 401, JSON.stringify({ error: "Invalid signature" }));
+				return true;
+			}
+		}
+
+		let payload: WebhookPayload;
+		try {
+			payload = JSON.parse(body) as WebhookPayload;
+		} catch {
+			send(res, 400, JSON.stringify({ error: "Invalid JSON" }));
+			return true;
+		}
+
+		if (payload.event !== "message.received" || !payload.inbox?.id || !payload.message?.id) {
+			send(res, 200, JSON.stringify({ ok: true, ignored: true }));
+			return true;
+		}
+
+		options.pushAlert({
+			inboxId: payload.inbox.id,
+			address: payload.inbox.address,
+			count: 1,
+			subjects: [payload.message.subject || "(no subject)"],
 		});
-	}
 
-	ctx.pushAlert({
-		inboxId: payload.inbox.id,
-		address: payload.inbox.address,
-		count: 1,
-		subjects: [payload.message.subject || "(no subject)"],
-	});
-
-	return new Response(JSON.stringify({ ok: true }), {
-		status: 200,
-		headers: { "content-type": "application/json" },
-	});
+		send(res, 200, JSON.stringify({ ok: true }));
+		return true;
+	};
 }
 
 async function hmacSha256Hex(secret: string, data: string): Promise<string> {

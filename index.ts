@@ -13,7 +13,7 @@ import {
 	createMarkUnreadTool,
 	createReadMessageTool,
 } from "./src/tools.js";
-import { handleWebhook } from "./src/webhook.js";
+import { createWebhookHandler } from "./src/webhook.js";
 
 interface ClankerMailsConfig {
 	apiKey?: string;
@@ -89,8 +89,7 @@ export default definePluginEntry({
 			path: webhookPath,
 			auth: "plugin",
 			match: "exact",
-			handler: async (request) => handleWebhook({
-				request,
+			handler: createWebhookHandler({
 				signatureSecret: config.webhookSecret ?? null,
 				pushAlert: (alert) => pushedAlerts.push(alert),
 			}),
