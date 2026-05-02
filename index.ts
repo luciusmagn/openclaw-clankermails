@@ -77,7 +77,7 @@ export default definePluginEntry({
 		api.on("before_prompt_build", async () => {
 			const alerts = drainAlerts();
 			if (alerts.length === 0) return;
-			return { context: formatAlertText(alerts) };
+			return { prependContext: formatAlertText(alerts) };
 		});
 
 		// Real-time webhook receiver. Configure the inbox webhook_url to
@@ -106,7 +106,7 @@ export default definePluginEntry({
 				poller = new InboxPoller(config, ctx.stateDir, {
 					info: (msg) => ctx.logger.info(msg),
 					warn: (msg) => ctx.logger.warn(msg),
-					error: (msg, err) => ctx.logger.error(msg, err),
+					error: (msg, err) => ctx.logger.error(err ? `${msg}: ${err instanceof Error ? err.message : String(err)}` : msg),
 				});
 				poller.start();
 			},

@@ -1,4 +1,5 @@
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-runtime";
+import { jsonResult } from "openclaw/plugin-sdk/provider-web-search";
 import { Type } from "typebox";
 import { ClankerMailsClient } from "./client.js";
 
@@ -12,12 +13,8 @@ function getClient(api: OpenClawPluginApi): ClankerMailsClient {
 	return new ClankerMailsClient(config);
 }
 
-function jsonResult(data: unknown) {
-	return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
-}
-
 function errorResult(message: string) {
-	return { content: [{ type: "text" as const, text: message }], isError: true };
+	return jsonResult({ error: message, failed: true });
 }
 
 export function createListInboxesTool(api: OpenClawPluginApi) {
